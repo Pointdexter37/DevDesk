@@ -62,6 +62,9 @@ export default function Home() {
   const [editingTaskEstimate, setEditingTaskEstimate] = useState("30");
   const [editingTaskStatus, setEditingTaskStatus] =
     useState<Task["status"]>("todo");
+  const [taskFilter, setTaskFilter] = useState<
+    "open" | "in_progress" | "overdue"
+  >("open");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const todayDate = new Date();
@@ -130,6 +133,11 @@ export default function Home() {
     ),
     today,
   );
+  const visibleTasks = orderedTasks.filter((task) => {
+    if (taskFilter === "in_progress") return task.status === "in_progress";
+    if (taskFilter === "overdue") return Boolean(task.dueDate && task.dueDate < today);
+    return true;
+  });
   const completedCount = tasks.filter((task) => task.status === "done").length;
   const completedTasks = tasks.filter((task) => task.status === "done");
   const plannedMinutes = orderedTasks.reduce(
@@ -457,10 +465,17 @@ export default function Home() {
                   <p className="mb-2 text-sm font-medium text-[#7b8490]">Your plan</p>
                   <h2 className="text-2xl font-semibold tracking-[-0.03em]">Up next</h2>
                 </div>
-                <span className="rounded-full bg-[#f0f2ff] px-3 py-1 text-xs font-semibold text-[#5364d5]">{orderedTasks.length} tasks</span>
+                <div className="flex items-center gap-2">
+                  <select className="rounded-xl border border-[#e0e4e8] bg-white px-2 py-1.5 text-xs font-semibold text-[#5364d5] outline-none" aria-label="Filter tasks" value={taskFilter} onChange={(event) => setTaskFilter(event.target.value as typeof taskFilter)}>
+                    <option value="open">All open</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="overdue">Overdue</option>
+                  </select>
+                  <span className="rounded-full bg-[#f0f2ff] px-3 py-1 text-xs font-semibold text-[#5364d5]">{visibleTasks.length} tasks</span>
+                </div>
               </div>
               <div className="space-y-2">
-                {orderedTasks.map((task, index) =>
+                {visibleTasks.map((task, index) =>
                   editingTaskId === task.id ? (
                     <form key={task.id} className="rounded-2xl bg-[#f8f9fb] p-4" onSubmit={(event) => void saveTask(event, task)}>
                       <input className="w-full rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm outline-none focus:border-[#7685ec]" value={editingTaskTitle} onChange={(event) => setEditingTaskTitle(event.target.value)} aria-label="Task title" />
@@ -496,6 +511,7 @@ export default function Home() {
                     </div>
                   ),
                 )}
+                {visibleTasks.length === 0 ? <p className="rounded-2xl bg-[#f8f9fb] px-4 py-6 text-center text-sm text-[#9aa3ac]">No tasks match this filter.</p> : null}
               </div>
               <form className="mt-5 flex flex-wrap gap-2 border-t border-[#eef0f2] pt-5" onSubmit={addTask}>
                 <input className="min-w-0 flex-1 rounded-xl border border-[#e0e4e8] px-4 py-3 text-sm outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]" placeholder="Add a task..." value={newTask} onChange={(event) => setNewTask(event.target.value)} />
