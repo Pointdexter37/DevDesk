@@ -391,6 +391,11 @@ export default function Home() {
         </aside>
 
         <section className="flex-1 px-5 py-6 sm:px-10 lg:px-14 lg:py-10">
+          <nav className="mb-6 flex items-center gap-2 overflow-x-auto lg:hidden" aria-label="Mobile navigation">
+            <a className="shrink-0 rounded-xl bg-[#eef2ff] px-4 py-2.5 text-sm font-semibold text-[#4255d4]" href="#today">Today</a>
+            <a className="shrink-0 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-[#68727d]" href="#tasks">Tasks ({tasks.length})</a>
+            <a className="shrink-0 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-[#68727d]" href="/activity">Activity</a>
+          </nav>
           <header className="mb-10 flex items-start justify-between">
             <div>
               <p className="mb-2 text-sm font-medium text-[#7b8490]">{formatDate(todayDate)}</p>
