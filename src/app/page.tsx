@@ -19,6 +19,7 @@ type Task = PrioritizableTask & {
 type Activity = {
   id: string;
   description: string;
+  taskId: string | null;
   time: string;
   duration?: string;
   durationMinutes: number | null;
@@ -49,6 +50,7 @@ export default function Home() {
   const [newTaskEstimate, setNewTaskEstimate] = useState("30");
   const [newActivity, setNewActivity] = useState("");
   const [newActivityDuration, setNewActivityDuration] = useState("");
+  const [newActivityTaskId, setNewActivityTaskId] = useState("");
   const [reflection, setReflection] = useState("");
   const [isSavingReview, setIsSavingReview] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -92,6 +94,7 @@ export default function Home() {
             description: string;
             occurredAt: string;
             durationMinutes: number | null;
+            taskId: string | null;
           }) => ({
             id: activity.id,
             description: activity.description,
@@ -103,6 +106,7 @@ export default function Home() {
               ? `${activity.durationMinutes} min`
               : undefined,
             durationMinutes: activity.durationMinutes,
+            taskId: activity.taskId,
           })),
         );
         const reviewResponse = await fetch(`/api/reviews?date=${today}`);
@@ -188,6 +192,7 @@ export default function Home() {
           durationMinutes: newActivityDuration
             ? Number(newActivityDuration)
             : undefined,
+          taskId: newActivityTaskId || null,
         }),
       });
       if (!response.ok) throw new Error("Unable to create activity.");
@@ -201,11 +206,13 @@ export default function Home() {
             ? `${activity.durationMinutes} min`
             : undefined,
           durationMinutes: activity.durationMinutes,
+          taskId: activity.taskId,
         },
         ...current,
       ]);
       setNewActivity("");
       setNewActivityDuration("");
+      setNewActivityTaskId("");
     } catch (activityError) {
       console.error(activityError);
       setError("We couldn't save that activity.");
@@ -428,6 +435,10 @@ export default function Home() {
               <form className="mt-7 flex gap-2" onSubmit={addActivity}>
                 <input className="min-w-0 flex-1 rounded-xl border border-[#e0e4e8] bg-[#fafbfc] px-4 py-3 text-sm outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]" placeholder="Log an activity..." value={newActivity} onChange={(event) => setNewActivity(event.target.value)} />
                 <input className="w-20 rounded-xl border border-[#e0e4e8] bg-[#fafbfc] px-3 py-3 text-sm outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]" type="number" min="1" max="1440" placeholder="Min" aria-label="Activity duration in minutes" value={newActivityDuration} onChange={(event) => setNewActivityDuration(event.target.value)} />
+                <select className="max-w-36 rounded-xl border border-[#e0e4e8] bg-[#fafbfc] px-3 py-3 text-sm text-[#53606c] outline-none focus:border-[#7685ec]" aria-label="Link activity to task" value={newActivityTaskId} onChange={(event) => setNewActivityTaskId(event.target.value)}>
+                  <option value="">No task</option>
+                  {tasks.filter((task) => task.status !== "archived").map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}
+                </select>
                 <button className="rounded-xl bg-[#4255d4] px-4 py-3 text-sm font-semibold text-white hover:bg-[#3446bf]" type="submit">Log</button>
               </form>
               <p className="mt-3 text-xs text-[#9aa3ac]">A quick note is enough. Add detail later if you need it.</p>
@@ -535,6 +546,7 @@ export default function Home() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium leading-5 text-[#35404b]">{activity.description}</p>
                       <p className="mt-1 text-xs text-[#9aa3ac]">{activity.time}{activity.duration ? ` · ${activity.duration}` : ""}</p>
+                      {activity.taskId ? <p className="mt-1 text-xs font-medium text-[#5364d5]">{tasks.find((task) => task.id === activity.taskId)?.title ?? "Linked task"}</p> : null}
                     </div>
                   </div>
                 ))}

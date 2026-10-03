@@ -8,6 +8,7 @@ type Activity = {
   description: string;
   durationMinutes: number | null;
   occurredAt: string;
+  taskId: string | null;
 };
 
 function todayKey() {
@@ -60,6 +61,9 @@ export default function ActivityHistoryPage() {
           id: editingId,
           description: description.trim(),
           durationMinutes: duration ? Number(duration) : null,
+          taskId:
+            activities.find((activity) => activity.id === editingId)?.taskId ??
+            null,
         }),
       });
       if (!response.ok) throw new Error("Unable to update activity.");

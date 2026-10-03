@@ -7,6 +7,7 @@ import { activities } from "@/db/schema";
 const createActivitySchema = z.object({
   description: z.string().trim().min(1).max(500),
   durationMinutes: z.number().int().positive().max(1440).optional(),
+  taskId: z.string().uuid().nullable().optional(),
 });
 
 export async function GET(request: Request) {
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
   const activity = {
     id: crypto.randomUUID(),
     description: parsed.data.description,
-    taskId: null,
+    taskId: parsed.data.taskId ?? null,
     durationMinutes: parsed.data.durationMinutes ?? null,
     occurredAt: now,
     createdAt: now,
@@ -78,6 +79,7 @@ export async function PATCH(request: Request) {
       id: z.string().uuid(),
       description: z.string().trim().min(1).max(500),
       durationMinutes: z.number().int().positive().max(1440).nullable(),
+      taskId: z.string().uuid().nullable().optional(),
     })
     .safeParse(await request.json());
 
@@ -94,6 +96,9 @@ export async function PATCH(request: Request) {
       .set({
         description: parsed.data.description,
         durationMinutes: parsed.data.durationMinutes,
+        ...(parsed.data.taskId !== undefined && {
+          taskId: parsed.data.taskId,
+        }),
       })
       .where(eq(activities.id, parsed.data.id))
       .returning();
