@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, type CSSProperties, useEffect, useState } from "react";
 import {
   getTaskRecommendation,
   prioritizeTasks,
@@ -371,7 +371,7 @@ export default function Home() {
           <button className="ml-3 underline" onClick={() => setError("")}>Dismiss</button>
         </div>
       ) : null}
-      <div className="mx-auto flex min-h-screen max-w-[1440px]">
+      <div className="havu-page mx-auto flex min-h-screen max-w-[1440px]">
         <aside className="hidden w-64 shrink-0 border-r border-[#e7eaee] bg-white px-6 py-8 lg:block">
           <div className="mb-14 flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#17202a] text-sm font-bold text-white">
@@ -477,7 +477,7 @@ export default function Home() {
               <div className="space-y-2">
                 {visibleTasks.map((task, index) =>
                   editingTaskId === task.id ? (
-                    <form key={task.id} className="rounded-2xl bg-[#f8f9fb] p-4" onSubmit={(event) => void saveTask(event, task)}>
+                    <form key={task.id} className="havu-reveal rounded-2xl bg-[#f8f9fb] p-4" style={{ "--reveal-delay": `${index * 55}ms` } as CSSProperties} onSubmit={(event) => void saveTask(event, task)}>
                       <input className="w-full rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm outline-none focus:border-[#7685ec]" value={editingTaskTitle} onChange={(event) => setEditingTaskTitle(event.target.value)} aria-label="Task title" />
                       <textarea className="mt-2 min-h-16 w-full rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm outline-none focus:border-[#7685ec]" placeholder="Description (optional)" value={editingTaskDescription} onChange={(event) => setEditingTaskDescription(event.target.value)} aria-label="Task description" />
                       <div className="mt-2 flex gap-2">
@@ -494,7 +494,7 @@ export default function Home() {
                       </div>
                     </form>
                   ) : (
-                    <div key={task.id} className="group flex items-center gap-3 rounded-2xl px-3 py-4 transition hover:bg-[#f8f9fb]">
+                    <div key={task.id} className="havu-reveal group flex items-center gap-3 rounded-2xl px-3 py-4 transition hover:bg-[#f8f9fb]" style={{ "--reveal-delay": `${index * 55}ms` } as CSSProperties}>
                       <button className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${index === 0 ? "border-[#4255d4] bg-[#4255d4] text-white" : "border-[#d8dde2] text-transparent group-hover:border-[#9aa7f0]"}`} onClick={() => void toggleTask(task)} aria-label={`Complete ${task.title}`}>✓</button>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-[#27323d]">{task.title}</span>
@@ -562,7 +562,7 @@ export default function Home() {
               </div>
               <div className="space-y-6">
                 {activities.map((activity) => (
-                  <div className="relative flex gap-4" key={activity.id}>
+                  <div className="havu-reveal relative flex gap-4" key={activity.id} style={{ "--reveal-delay": `${activities.indexOf(activity) * 70}ms` } as CSSProperties}>
                     <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#a8b3ff] ring-4 ring-[#f0f2ff]" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium leading-5 text-[#35404b]">{activity.description}</p>

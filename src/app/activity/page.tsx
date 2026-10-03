@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, type CSSProperties, useEffect, useState } from "react";
 import Link from "next/link";
 
 type Activity = {
@@ -135,9 +135,9 @@ export default function ActivityHistoryPage() {
             <span className="rounded-full bg-[#f0f2ff] px-3 py-1 text-xs font-semibold text-[#5364d5]">{activities.length} entries</span>
           </div>
           <div className="space-y-3">
-            {activities.map((activity) =>
+            {activities.map((activity, index) =>
               editingId === activity.id ? (
-                <form className="rounded-2xl bg-[#f8f9fb] p-4" key={activity.id} onSubmit={(event) => void saveActivity(event)}>
+                <form className="havu-reveal rounded-2xl bg-[#f8f9fb] p-4" key={activity.id} style={{ "--reveal-delay": `${index * 65}ms` } as CSSProperties} onSubmit={(event) => void saveActivity(event)}>
                   <input className="w-full rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm" value={description} onChange={(event) => setDescription(event.target.value)} aria-label="Activity description" />
                   <div className="mt-2 flex gap-2">
                     <input className="w-24 rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm" type="number" min="1" max="1440" placeholder="Minutes" value={duration} onChange={(event) => setDuration(event.target.value)} aria-label="Activity duration" />
@@ -146,7 +146,7 @@ export default function ActivityHistoryPage() {
                   </div>
                 </form>
               ) : (
-                <div className="group flex items-center gap-4 rounded-2xl border border-[#eef0f2] px-4 py-4" key={activity.id}>
+                <div className="havu-reveal group flex items-center gap-4 rounded-2xl border border-[#eef0f2] px-4 py-4" key={activity.id} style={{ "--reveal-delay": `${index * 65}ms` } as CSSProperties}>
                   <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#a8b3ff] ring-4 ring-[#f0f2ff]" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-[#35404b]">{activity.description}</p>
