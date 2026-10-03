@@ -42,4 +42,5 @@ next-env.d.ts
 
 # local project context and database
 agent.md
+!.env.example
 local.db
