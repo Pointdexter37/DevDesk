@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { activities } from "@/db/schema";
@@ -7,6 +8,37 @@ const createActivitySchema = z.object({
   description: z.string().trim().min(1).max(500),
   durationMinutes: z.number().int().positive().max(1440).optional(),
 });
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const date = searchParams.get("date");
+
+  if (date && !z.string().date().safeParse(date).success) {
+    return NextResponse.json({ error: "Invalid date." }, { status: 400 });
+  }
+
+  try {
+    const conditions = date
+      ? and(
+          gte(activities.occurredAt, new Date(`${date}T00:00:00`)),
+          lt(activities.occurredAt, new Date(`${date}T23:59:59.999`)),
+        )
+      : undefined;
+    const rows = await db
+      .select()
+      .from(activities)
+      .where(conditions)
+      .orderBy(desc(activities.occurredAt));
+
+    return NextResponse.json(rows);
+  } catch (error) {
+    console.error("Failed to load activity history", error);
+    return NextResponse.json(
+      { error: "Unable to load activity history." },
+      { status: 500 },
+    );
+  }
+}
 
 export async function POST(request: Request) {
   const parsed = createActivitySchema.safeParse(await request.json());
@@ -35,6 +67,81 @@ export async function POST(request: Request) {
     console.error("Failed to create activity", error);
     return NextResponse.json(
       { error: "Unable to create activity." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  const parsed = z
+    .object({
+      id: z.string().uuid(),
+      description: z.string().trim().min(1).max(500),
+      durationMinutes: z.number().int().positive().max(1440).nullable(),
+    })
+    .safeParse(await request.json());
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Enter a valid activity description and duration." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const [activity] = await db
+      .update(activities)
+      .set({
+        description: parsed.data.description,
+        durationMinutes: parsed.data.durationMinutes,
+      })
+      .where(eq(activities.id, parsed.data.id))
+      .returning();
+
+    if (!activity) {
+      return NextResponse.json(
+        { error: "Activity not found." },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(activity);
+  } catch (error) {
+    console.error("Failed to update activity", error);
+    return NextResponse.json(
+      { error: "Unable to update activity." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const parsed = z
+    .object({ id: z.string().uuid() })
+    .safeParse(await request.json());
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid activity id." }, { status: 400 });
+  }
+
+  try {
+    const deleted = await db
+      .delete(activities)
+      .where(eq(activities.id, parsed.data.id))
+      .returning({ id: activities.id });
+
+    if (deleted.length === 0) {
+      return NextResponse.json(
+        { error: "Activity not found." },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({ id: parsed.data.id });
+  } catch (error) {
+    console.error("Failed to delete activity", error);
+    return NextResponse.json(
+      { error: "Unable to delete activity." },
       { status: 500 },
     );
   }

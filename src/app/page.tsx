@@ -10,6 +10,8 @@ type Task = PrioritizableTask & {
   id: string;
   title: string;
   estimate: string;
+  estimatedMinutes: number | null;
+  completedAt?: string | null;
 };
 
 type Activity = {
@@ -17,6 +19,7 @@ type Activity = {
   description: string;
   time: string;
   duration?: string;
+  durationMinutes: number | null;
 };
 
 function formatDate(date: Date) {
@@ -44,6 +47,11 @@ export default function Home() {
   const [newTaskEstimate, setNewTaskEstimate] = useState("30");
   const [newActivity, setNewActivity] = useState("");
   const [newActivityDuration, setNewActivityDuration] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTaskTitle, setEditingTaskTitle] = useState("");
+  const [editingTaskPriority, setEditingTaskPriority] =
+    useState<Task["priority"]>("medium");
+  const [editingTaskEstimate, setEditingTaskEstimate] = useState("30");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const todayDate = new Date();
@@ -60,6 +68,7 @@ export default function Home() {
             id: string;
             title: string;
             estimatedMinutes: number | null;
+            completedAt: string | null;
             priority: Task["priority"];
             dueDate: string | null;
             status: Task["status"];
@@ -84,6 +93,7 @@ export default function Home() {
             duration: activity.durationMinutes
               ? `${activity.durationMinutes} min`
               : undefined,
+            durationMinutes: activity.durationMinutes,
           })),
         );
       } catch (loadError) {
@@ -98,10 +108,21 @@ export default function Home() {
   }, []);
 
   const orderedTasks = prioritizeTasks(
-    tasks.filter((task) => task.status !== "done"),
+    tasks.filter(
+      (task) => task.status !== "done" && task.status !== "archived",
+    ),
     today,
   );
   const completedCount = tasks.filter((task) => task.status === "done").length;
+  const completedTasks = tasks.filter((task) => task.status === "done");
+  const plannedMinutes = orderedTasks.reduce(
+    (total, task) => total + (task.estimatedMinutes ?? 0),
+    0,
+  );
+  const loggedMinutes = activities.reduce(
+    (total, activity) => total + (activity.durationMinutes ?? 0),
+    0,
+  );
   const progress =
     tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
 
@@ -162,6 +183,7 @@ export default function Home() {
           duration: activity.durationMinutes
             ? `${activity.durationMinutes} min`
             : undefined,
+          durationMinutes: activity.durationMinutes,
         },
         ...current,
       ]);
@@ -200,6 +222,89 @@ export default function Home() {
     }
   }
 
+  function startEditingTask(task: Task) {
+    setEditingTaskId(task.id);
+    setEditingTaskTitle(task.title);
+    setEditingTaskPriority(task.priority);
+    setEditingTaskEstimate(String(task.estimatedMinutes ?? 30));
+  }
+
+  async function saveTask(event: FormEvent<HTMLFormElement>, task: Task) {
+    event.preventDefault();
+    const title = editingTaskTitle.trim();
+    if (!title) return;
+
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: task.id,
+          title,
+          priority: editingTaskPriority,
+          estimatedMinutes: Number(editingTaskEstimate),
+        }),
+      });
+      if (!response.ok) throw new Error("Unable to edit task.");
+      const updatedTask = await response.json();
+      setTasks((current) =>
+        current.map((currentTask) =>
+          currentTask.id === task.id
+            ? {
+                ...currentTask,
+                ...updatedTask,
+                estimate: `${updatedTask.estimatedMinutes ?? 0} min`,
+              }
+            : currentTask,
+        ),
+      );
+      setEditingTaskId(null);
+    } catch (taskError) {
+      console.error(taskError);
+      setError("We couldn't edit that task.");
+    }
+  }
+
+  async function archiveTask(task: Task) {
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: task.id, status: "archived" }),
+      });
+      if (!response.ok) throw new Error("Unable to archive task.");
+      setTasks((current) =>
+        current.map((currentTask) =>
+          currentTask.id === task.id
+            ? { ...currentTask, status: "archived" }
+            : currentTask,
+        ),
+      );
+    } catch (taskError) {
+      console.error(taskError);
+      setError("We couldn't archive that task.");
+    }
+  }
+
+  async function deleteTask(task: Task) {
+    if (!window.confirm(`Delete "${task.title}"?`)) return;
+
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: task.id }),
+      });
+      if (!response.ok) throw new Error("Unable to delete task.");
+      setTasks((current) =>
+        current.filter((currentTask) => currentTask.id !== task.id),
+      );
+    } catch (taskError) {
+      console.error(taskError);
+      setError("We couldn't delete that task.");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f8fa] text-[#17202a]">
       {error ? (
@@ -223,7 +328,7 @@ export default function Home() {
             <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-[#68727d] hover:bg-[#f4f5f7]" href="#tasks">
               <span>□</span> Tasks <span className="ml-auto text-xs text-[#a0a8b0]">{tasks.length}</span>
             </a>
-            <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-[#68727d] hover:bg-[#f4f5f7]" href="#activity">
+            <a className="flex items-center gap-3 rounded-xl px-4 py-3 text-[#68727d] hover:bg-[#f4f5f7]" href="/activity">
               <span>↗</span> Activity
             </a>
           </nav>
@@ -256,7 +361,9 @@ export default function Home() {
                     Start with the roadmap review, then protect time for the update.
                   </h2>
                 </div>
-                <span className="rounded-full bg-[#2d3945] px-3 py-1 text-xs font-semibold text-[#cbd2d8]">2h 15m planned</span>
+                <span className="rounded-full bg-[#2d3945] px-3 py-1 text-xs font-semibold text-[#cbd2d8]">
+                  {Math.floor(plannedMinutes / 60)}h {plannedMinutes % 60}m planned
+                </span>
               </div>
               <div className="mt-9 flex items-center justify-between border-t border-[#35414c] pt-5 text-sm">
                 <span className="text-[#aeb8c1]">Today&apos;s progress</span>
@@ -294,16 +401,33 @@ export default function Home() {
                 <span className="rounded-full bg-[#f0f2ff] px-3 py-1 text-xs font-semibold text-[#5364d5]">{orderedTasks.length} tasks</span>
               </div>
               <div className="space-y-2">
-                {orderedTasks.map((task, index) => (
-                  <button key={task.id} className="group flex w-full items-center gap-4 rounded-2xl px-3 py-4 text-left transition hover:bg-[#f8f9fb]" onClick={() => void toggleTask(task)}>
-                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${index === 0 ? "border-[#4255d4] bg-[#4255d4] text-white" : "border-[#d8dde2] text-transparent group-hover:border-[#9aa7f0]"}`}>✓</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-[#27323d]">{task.title}</span>
-                      <span className="mt-1 block text-xs text-[#8b949d]">{task.estimate} <span className="mx-1">·</span> {task.priority} priority</span>
-                    </span>
-                    <span className="text-xs font-medium text-[#8b949d]">{index === 0 ? "Now" : "Later"}</span>
-                  </button>
-                ))}
+                {orderedTasks.map((task, index) =>
+                  editingTaskId === task.id ? (
+                    <form key={task.id} className="rounded-2xl bg-[#f8f9fb] p-4" onSubmit={(event) => void saveTask(event, task)}>
+                      <input className="w-full rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm outline-none focus:border-[#7685ec]" value={editingTaskTitle} onChange={(event) => setEditingTaskTitle(event.target.value)} aria-label="Task title" />
+                      <div className="mt-2 flex gap-2">
+                        <select className="rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm" value={editingTaskPriority} onChange={(event) => setEditingTaskPriority(event.target.value as Task["priority"])} aria-label="Task priority">
+                          <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
+                        </select>
+                        <input className="w-20 rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm" type="number" min="1" max="1440" value={editingTaskEstimate} onChange={(event) => setEditingTaskEstimate(event.target.value)} aria-label="Estimated minutes" />
+                        <button className="rounded-xl bg-[#4255d4] px-3 py-2 text-xs font-semibold text-white" type="submit">Save</button>
+                        <button className="rounded-xl border border-[#dfe3e8] px-3 py-2 text-xs font-semibold text-[#53606c]" type="button" onClick={() => setEditingTaskId(null)}>Cancel</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div key={task.id} className="group flex items-center gap-3 rounded-2xl px-3 py-4 transition hover:bg-[#f8f9fb]">
+                      <button className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${index === 0 ? "border-[#4255d4] bg-[#4255d4] text-white" : "border-[#d8dde2] text-transparent group-hover:border-[#9aa7f0]"}`} onClick={() => void toggleTask(task)} aria-label={`Complete ${task.title}`}>✓</button>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-[#27323d]">{task.title}</span>
+                        <span className="mt-1 block text-xs text-[#8b949d]">{task.estimate} <span className="mx-1">·</span> {task.priority} priority</span>
+                      </span>
+                      <span className="text-xs font-medium text-[#8b949d]">{index === 0 ? "Now" : "Later"}</span>
+                      <button className="text-xs font-semibold text-[#5364d5] opacity-0 group-hover:opacity-100" onClick={() => startEditingTask(task)}>Edit</button>
+                      <button className="text-xs font-semibold text-[#9a6b27] opacity-0 group-hover:opacity-100" onClick={() => void archiveTask(task)}>Archive</button>
+                      <button className="text-xs font-semibold text-[#9f2d3d] opacity-0 group-hover:opacity-100" onClick={() => void deleteTask(task)}>Delete</button>
+                    </div>
+                  ),
+                )}
               </div>
               <form className="mt-5 flex flex-wrap gap-2 border-t border-[#eef0f2] pt-5" onSubmit={addTask}>
                 <input className="min-w-0 flex-1 rounded-xl border border-[#e0e4e8] px-4 py-3 text-sm outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]" placeholder="Add a task..." value={newTask} onChange={(event) => setNewTask(event.target.value)} />
@@ -315,6 +439,30 @@ export default function Home() {
                 <input className="w-20 rounded-xl border border-[#e0e4e8] px-3 py-3 text-sm outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]" type="number" min="1" max="1440" aria-label="Estimated task minutes" value={newTaskEstimate} onChange={(event) => setNewTaskEstimate(event.target.value)} />
                 <button className="rounded-xl border border-[#dfe3e8] px-4 py-3 text-sm font-semibold text-[#53606c] hover:bg-[#f8f9fa]" type="submit">Add</button>
               </form>
+              <div className="mt-8 border-t border-[#eef0f2] pt-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <p className="mb-1 text-sm font-medium text-[#7b8490]">What you did</p>
+                    <h3 className="text-lg font-semibold tracking-[-0.03em]">Completed today</h3>
+                  </div>
+                  <span className="rounded-full bg-[#eef8f1] px-3 py-1 text-xs font-semibold text-[#368154]">{completedCount}</span>
+                </div>
+                {completedTasks.length > 0 ? (
+                  <div className="space-y-2">
+                    {completedTasks.map((task) => (
+                      <div key={task.id} className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[#f8f9fb]">
+                        <button className="flex h-5 w-5 items-center justify-center rounded-full bg-[#368154] text-xs text-white" onClick={() => void toggleTask(task)} aria-label={`Reopen ${task.title}`}>✓</button>
+                        <span className="flex-1 truncate text-sm text-[#53606c]">{task.title}</span>
+                        <span className="text-xs text-[#9aa3ac]">{task.estimate}</span>
+                        <button className="text-xs font-semibold text-[#5364d5] opacity-0 group-hover:opacity-100" onClick={() => startEditingTask(task)}>Edit</button>
+                        <button className="text-xs font-semibold text-[#9f2d3d] opacity-0 group-hover:opacity-100" onClick={() => void deleteTask(task)}>Delete</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[#9aa3ac]">Complete a task to see it here.</p>
+                )}
+              </div>
             </section>
 
             <section id="activity" className="rounded-3xl border border-[#e7eaee] bg-white p-7 shadow-[0_8px_30px_rgba(23,32,42,0.03)] sm:p-8">
@@ -324,6 +472,9 @@ export default function Home() {
                   <h2 className="text-2xl font-semibold tracking-[-0.03em]">Activity</h2>
                 </div>
                 <span className="text-sm font-semibold text-[#4255d4]">Today</span>
+              </div>
+              <div className="mb-6 rounded-2xl bg-[#f7f8fa] px-4 py-3 text-sm text-[#68727d]">
+                <span className="font-semibold text-[#35404b]">{loggedMinutes} min</span> logged so far
               </div>
               <div className="space-y-6">
                 {activities.map((activity) => (
@@ -338,7 +489,7 @@ export default function Home() {
               </div>
               {isLoading ? <p className="text-sm text-[#9aa3ac]">Loading your activity...</p> : null}
               {!isLoading && activities.length === 0 ? <p className="text-sm text-[#9aa3ac]">No activity logged yet today.</p> : null}
-              <button className="mt-8 w-full rounded-xl border border-[#e0e4e8] py-3 text-sm font-semibold text-[#53606c] hover:bg-[#f8f9fa]">View full history</button>
+              <a className="mt-8 block w-full rounded-xl border border-[#e0e4e8] py-3 text-center text-sm font-semibold text-[#53606c] hover:bg-[#f8f9fa]" href="/activity">View full history</a>
             </section>
           </div>
         </section>
