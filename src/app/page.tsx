@@ -1,65 +1,23 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   prioritizeTasks,
   type PrioritizableTask,
 } from "@/lib/task-prioritization";
 
 type Task = PrioritizableTask & {
-  id: number;
+  id: string;
   title: string;
   estimate: string;
 };
 
 type Activity = {
-  id: number;
+  id: string;
   description: string;
   time: string;
   duration?: string;
 };
-
-const initialTasks: Task[] = [
-  {
-    id: 1,
-    title: "Review the product roadmap",
-    estimate: "45 min",
-    priority: "high",
-    dueDate: "2026-10-03",
-    status: "in_progress",
-  },
-  {
-    id: 2,
-    title: "Write the weekly project update",
-    estimate: "30 min",
-    priority: "medium",
-    dueDate: "2026-10-03",
-    status: "todo",
-  },
-  {
-    id: 3,
-    title: "Clean up the design backlog",
-    estimate: "20 min",
-    priority: "low",
-    dueDate: null,
-    status: "todo",
-  },
-];
-
-const initialActivities: Activity[] = [
-  {
-    id: 1,
-    description: "Set up the DevDesk project foundation",
-    time: "9:10 AM",
-    duration: "35 min",
-  },
-  {
-    id: 2,
-    description: "Reviewed notes from yesterday",
-    time: "8:25 AM",
-    duration: "20 min",
-  },
-];
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
@@ -70,11 +28,61 @@ function formatDate(date: Date) {
 }
 
 export default function Home() {
-  const [tasks, setTasks] = useState(initialTasks);
-  const [activities, setActivities] = useState(initialActivities);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [newTask, setNewTask] = useState("");
   const [newActivity, setNewActivity] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const today = "2026-10-03";
+
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const response = await fetch("/api/dashboard");
+        if (!response.ok) throw new Error("Unable to load dashboard data.");
+        const data = await response.json();
+        setTasks(
+          data.tasks.map((task: {
+            id: string;
+            title: string;
+            estimatedMinutes: number | null;
+            priority: Task["priority"];
+            dueDate: string | null;
+            status: Task["status"];
+          }) => ({
+            ...task,
+            estimate: `${task.estimatedMinutes ?? 0} min`,
+          })),
+        );
+        setActivities(
+          data.activities.map((activity: {
+            id: string;
+            description: string;
+            occurredAt: string;
+            durationMinutes: number | null;
+          }) => ({
+            id: activity.id,
+            description: activity.description,
+            time: new Intl.DateTimeFormat("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            }).format(new Date(activity.occurredAt)),
+            duration: activity.durationMinutes
+              ? `${activity.durationMinutes} min`
+              : undefined,
+          })),
+        );
+      } catch (loadError) {
+        console.error(loadError);
+        setError("We couldn't load your dashboard.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    void loadDashboard();
+  }, []);
 
   const orderedTasks = useMemo(
     () => prioritizeTasks(tasks.filter((task) => task.status !== "done"), today),
@@ -83,56 +91,93 @@ export default function Home() {
   const completedCount = tasks.filter((task) => task.status === "done").length;
   const progress = Math.round((completedCount / tasks.length) * 100);
 
-  function addTask(event: FormEvent<HTMLFormElement>) {
+  async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const title = newTask.trim();
     if (!title) return;
 
-    setTasks((current) => [
-      ...current,
-      {
-        id: Date.now(),
-        title,
-        estimate: "30 min",
-        priority: "medium",
-        dueDate: today,
-        status: "todo",
-      },
-    ]);
-    setNewTask("");
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, dueDate: today }),
+      });
+      if (!response.ok) throw new Error("Unable to create task.");
+      const task = await response.json();
+      setTasks((current) => [
+        ...current,
+        { ...task, estimate: `${task.estimatedMinutes ?? 0} min` },
+      ]);
+      setNewTask("");
+    } catch (taskError) {
+      console.error(taskError);
+      setError("We couldn't save that task.");
+    }
   }
 
-  function addActivity(event: FormEvent<HTMLFormElement>) {
+  async function addActivity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const description = newActivity.trim();
     if (!description) return;
 
-    setActivities((current) => [
-      {
-        id: Date.now(),
-        description,
-        time: "Just now",
-      },
-      ...current,
-    ]);
-    setNewActivity("");
+    try {
+      const response = await fetch("/api/activities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description }),
+      });
+      if (!response.ok) throw new Error("Unable to create activity.");
+      const activity = await response.json();
+      setActivities((current) => [
+        {
+          id: activity.id,
+          description: activity.description,
+          time: "Just now",
+        },
+        ...current,
+      ]);
+      setNewActivity("");
+    } catch (activityError) {
+      console.error(activityError);
+      setError("We couldn't save that activity.");
+    }
   }
 
-  function toggleTask(id: number) {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              status: task.status === "done" ? "todo" : "done",
-            }
-          : task,
-      ),
-    );
+  async function toggleTask(task: Task) {
+    const status = task.status === "done" ? "todo" : "done";
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: task.id, status }),
+      });
+      if (!response.ok) throw new Error("Unable to update task.");
+      const updatedTask = await response.json();
+      setTasks((current) =>
+        current.map((currentTask) =>
+          currentTask.id === task.id
+            ? {
+                ...currentTask,
+                ...updatedTask,
+                estimate: `${updatedTask.estimatedMinutes ?? 0} min`,
+              }
+            : currentTask,
+        ),
+      );
+    } catch (taskError) {
+      console.error(taskError);
+      setError("We couldn't update that task.");
+    }
   }
 
   return (
     <main className="min-h-screen bg-[#f7f8fa] text-[#17202a]">
+      {error ? (
+        <div className="fixed right-5 top-5 z-10 rounded-xl bg-[#9f2d3d] px-4 py-3 text-sm font-medium text-white shadow-lg">
+          {error}
+          <button className="ml-3 underline" onClick={() => setError("")}>Dismiss</button>
+        </div>
+      ) : null}
       <div className="mx-auto flex min-h-screen max-w-[1440px]">
         <aside className="hidden w-64 shrink-0 border-r border-[#e7eaee] bg-white px-6 py-8 lg:block">
           <div className="mb-14 flex items-center gap-3">
@@ -219,7 +264,7 @@ export default function Home() {
               </div>
               <div className="space-y-2">
                 {orderedTasks.map((task, index) => (
-                  <button key={task.id} className="group flex w-full items-center gap-4 rounded-2xl px-3 py-4 text-left transition hover:bg-[#f8f9fb]" onClick={() => toggleTask(task.id)}>
+                  <button key={task.id} className="group flex w-full items-center gap-4 rounded-2xl px-3 py-4 text-left transition hover:bg-[#f8f9fb]" onClick={() => void toggleTask(task)}>
                     <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${index === 0 ? "border-[#4255d4] bg-[#4255d4] text-white" : "border-[#d8dde2] text-transparent group-hover:border-[#9aa7f0]"}`}>✓</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-[#27323d]">{task.title}</span>
@@ -251,6 +296,8 @@ export default function Home() {
                       <p className="text-sm font-medium leading-5 text-[#35404b]">{activity.description}</p>
                       <p className="mt-1 text-xs text-[#9aa3ac]">{activity.time}{activity.duration ? ` · ${activity.duration}` : ""}</p>
                     </div>
+                    {isLoading ? <p className="text-sm text-[#9aa3ac]">Loading your activity...</p> : null}
+                    {!isLoading && activities.length === 0 ? <p className="text-sm text-[#9aa3ac]">No activity logged yet today.</p> : null}
                   </div>
                 ))}
               </div>
