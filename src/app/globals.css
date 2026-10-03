@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f8fa;
-  --foreground: #17202a;
+  --background: #f4f1ea;
+  --foreground: #151515;
 }
 
 @theme inline {
@@ -29,4 +29,95 @@ body {
 button,
 input {
   font: inherit;
+}
+
+.havu-shell {
+  --havu-paper: #f4f1ea;
+  --havu-panel: #fbfaf7;
+  --havu-ink: #151515;
+  --havu-muted: #77736c;
+  --havu-line: rgba(21, 21, 21, 0.14);
+  background: var(--havu-paper) !important;
+  color: var(--havu-ink) !important;
+  letter-spacing: -0.01em;
+}
+
+.havu-shell h1,
+.havu-shell h2,
+.havu-shell h3 {
+  letter-spacing: -0.045em;
+}
+
+.havu-shell aside {
+  background: var(--havu-paper) !important;
+  border-color: var(--havu-line) !important;
+}
+
+.havu-shell section[class*="rounded-3xl"],
+.havu-shell section[class*="rounded-2xl"] {
+  border-radius: 1.25rem !important;
+  border-color: var(--havu-line) !important;
+  box-shadow: none !important;
+}
+
+.havu-shell section.bg-\[\#17202a\] {
+  background: var(--havu-ink) !important;
+}
+
+.havu-shell section.bg-\[\#17202a\] h2 {
+  max-width: 30rem;
+  font-weight: 500;
+}
+
+.havu-shell section.bg-white,
+.havu-shell div.bg-white {
+  background: var(--havu-panel) !important;
+}
+
+.havu-shell input,
+.havu-shell textarea,
+.havu-shell select {
+  border-color: var(--havu-line) !important;
+  border-radius: 0.75rem !important;
+  background: transparent !important;
+}
+
+.havu-shell button[class*="bg-\[\#4255d4\]"] {
+  background: var(--havu-ink) !important;
+  border-radius: 999px !important;
+}
+
+.havu-shell a[class*="bg-\[\#eef2ff\]"],
+.havu-shell nav a[class*="bg-\[\#eef2ff\]"] {
+  background: var(--havu-ink) !important;
+  color: var(--havu-paper) !important;
+}
+
+.havu-shell [class*="rounded-full"] {
+  border-radius: 999px;
+}
+
+.havu-shell .group:hover {
+  background: rgba(21, 21, 21, 0.045) !important;
+}
+
+.havu-shell .text-\[\#4255d4\],
+.havu-shell .text-\[\#5364d5\] {
+  color: var(--havu-ink) !important;
+}
+
+.havu-shell .bg-\[\#f0f2ff\] {
+  background: rgba(21, 21, 21, 0.07) !important;
+}
+
+.havu-shell .border-\[\#e7eaee\],
+.havu-shell .border-\[\#e0e4e8\],
+.havu-shell .border-\[\#dfe3e8\] {
+  border-color: var(--havu-line) !important;
+}
+
+@media (max-width: 1023px) {
+  .havu-shell section[class*="rounded-3xl"] {
+    border-radius: 1rem !important;
+  }
 }

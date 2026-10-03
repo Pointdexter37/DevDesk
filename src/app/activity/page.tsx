@@ -106,7 +106,7 @@ export default function ActivityHistoryPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#f7f8fa] px-5 py-8 text-[#17202a] sm:px-10 lg:px-20 lg:py-12">
+    <main className="havu-shell min-h-screen bg-[#f7f8fa] px-5 py-8 text-[#17202a] sm:px-10 lg:px-20 lg:py-12">
       <div className="mx-auto max-w-4xl">
         <Link className="text-sm font-semibold text-[#4255d4]" href="/">← Back to Today</Link>
         <header className="mt-8 flex flex-wrap items-end justify-between gap-5">

@@ -364,7 +364,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f8fa] text-[#17202a]">
+    <main className="havu-shell min-h-screen bg-[#f7f8fa] text-[#17202a]">
       {error ? (
         <div className="fixed right-5 top-5 z-10 rounded-xl bg-[#9f2d3d] px-4 py-3 text-sm font-medium text-white shadow-lg">
           {error}
