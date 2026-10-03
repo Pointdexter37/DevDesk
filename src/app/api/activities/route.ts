@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { activities } from "@/db/schema";
+import { activities, tasks } from "@/db/schema";
 
 const createActivitySchema = z.object({
   description: z.string().trim().min(1).max(500),
@@ -26,8 +26,17 @@ export async function GET(request: Request) {
         )
       : undefined;
     const rows = await db
-      .select()
+      .select({
+        id: activities.id,
+        description: activities.description,
+        taskId: activities.taskId,
+        taskTitle: tasks.title,
+        durationMinutes: activities.durationMinutes,
+        occurredAt: activities.occurredAt,
+        createdAt: activities.createdAt,
+      })
       .from(activities)
+      .leftJoin(tasks, eq(activities.taskId, tasks.id))
       .where(conditions)
       .orderBy(desc(activities.occurredAt));
 

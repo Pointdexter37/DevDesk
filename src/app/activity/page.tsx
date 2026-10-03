@@ -9,6 +9,7 @@ type Activity = {
   durationMinutes: number | null;
   occurredAt: string;
   taskId: string | null;
+  taskTitle: string | null;
 };
 
 function todayKey() {
@@ -153,6 +154,7 @@ export default function ActivityHistoryPage() {
                       {new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(activity.occurredAt))}
                       {activity.durationMinutes ? ` · ${activity.durationMinutes} min` : ""}
                     </p>
+                    {activity.taskTitle ? <p className="mt-1 text-xs font-medium text-[#5364d5]">Task: {activity.taskTitle}</p> : null}
                   </div>
                   <button className="text-xs font-semibold text-[#5364d5]" onClick={() => startEditing(activity)}>Edit</button>
                   <button className="text-xs font-semibold text-[#9f2d3d]" onClick={() => void deleteActivity(activity)}>Delete</button>
