@@ -8,6 +8,7 @@ const createTaskSchema = z.object({
   title: z.string().trim().min(1).max(200),
   dueDate: z.string().date().optional(),
   priority: z.enum(["low", "medium", "high"]).default("medium"),
+  estimatedMinutes: z.number().int().positive().max(1440).default(30),
 });
 
 export async function POST(request: Request) {
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
     status: "todo" as const,
     priority: parsed.data.priority,
     dueDate: parsed.data.dueDate ?? null,
-    estimatedMinutes: 30,
+    estimatedMinutes: parsed.data.estimatedMinutes,
     completedAt: null,
     createdAt: now,
     updatedAt: now,

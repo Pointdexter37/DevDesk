@@ -39,7 +39,11 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [newTask, setNewTask] = useState("");
+  const [newTaskPriority, setNewTaskPriority] =
+    useState<Task["priority"]>("medium");
+  const [newTaskEstimate, setNewTaskEstimate] = useState("30");
   const [newActivity, setNewActivity] = useState("");
+  const [newActivityDuration, setNewActivityDuration] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const todayDate = new Date();
@@ -110,7 +114,12 @@ export default function Home() {
       const response = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, dueDate: today }),
+        body: JSON.stringify({
+          title,
+          dueDate: today,
+          priority: newTaskPriority,
+          estimatedMinutes: Number(newTaskEstimate),
+        }),
       });
       if (!response.ok) throw new Error("Unable to create task.");
       const task = await response.json();
@@ -119,6 +128,8 @@ export default function Home() {
         { ...task, estimate: `${task.estimatedMinutes ?? 0} min` },
       ]);
       setNewTask("");
+      setNewTaskPriority("medium");
+      setNewTaskEstimate("30");
     } catch (taskError) {
       console.error(taskError);
       setError("We couldn't save that task.");
@@ -134,7 +145,12 @@ export default function Home() {
       const response = await fetch("/api/activities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description }),
+        body: JSON.stringify({
+          description,
+          durationMinutes: newActivityDuration
+            ? Number(newActivityDuration)
+            : undefined,
+        }),
       });
       if (!response.ok) throw new Error("Unable to create activity.");
       const activity = await response.json();
@@ -143,10 +159,14 @@ export default function Home() {
           id: activity.id,
           description: activity.description,
           time: "Just now",
+          duration: activity.durationMinutes
+            ? `${activity.durationMinutes} min`
+            : undefined,
         },
         ...current,
       ]);
       setNewActivity("");
+      setNewActivityDuration("");
     } catch (activityError) {
       console.error(activityError);
       setError("We couldn't save that activity.");
@@ -257,6 +277,7 @@ export default function Home() {
               </div>
               <form className="mt-7 flex gap-2" onSubmit={addActivity}>
                 <input className="min-w-0 flex-1 rounded-xl border border-[#e0e4e8] bg-[#fafbfc] px-4 py-3 text-sm outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]" placeholder="Log an activity..." value={newActivity} onChange={(event) => setNewActivity(event.target.value)} />
+                <input className="w-20 rounded-xl border border-[#e0e4e8] bg-[#fafbfc] px-3 py-3 text-sm outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]" type="number" min="1" max="1440" placeholder="Min" aria-label="Activity duration in minutes" value={newActivityDuration} onChange={(event) => setNewActivityDuration(event.target.value)} />
                 <button className="rounded-xl bg-[#4255d4] px-4 py-3 text-sm font-semibold text-white hover:bg-[#3446bf]" type="submit">Log</button>
               </form>
               <p className="mt-3 text-xs text-[#9aa3ac]">A quick note is enough. Add detail later if you need it.</p>
@@ -284,8 +305,14 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-              <form className="mt-5 flex gap-2 border-t border-[#eef0f2] pt-5" onSubmit={addTask}>
+              <form className="mt-5 flex flex-wrap gap-2 border-t border-[#eef0f2] pt-5" onSubmit={addTask}>
                 <input className="min-w-0 flex-1 rounded-xl border border-[#e0e4e8] px-4 py-3 text-sm outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]" placeholder="Add a task..." value={newTask} onChange={(event) => setNewTask(event.target.value)} />
+                <select className="rounded-xl border border-[#e0e4e8] bg-white px-3 py-3 text-sm text-[#53606c] outline-none focus:border-[#7685ec]" aria-label="Task priority" value={newTaskPriority} onChange={(event) => setNewTaskPriority(event.target.value as Task["priority"])}>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+                <input className="w-20 rounded-xl border border-[#e0e4e8] px-3 py-3 text-sm outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]" type="number" min="1" max="1440" aria-label="Estimated task minutes" value={newTaskEstimate} onChange={(event) => setNewTaskEstimate(event.target.value)} />
                 <button className="rounded-xl border border-[#dfe3e8] px-4 py-3 text-sm font-semibold text-[#53606c] hover:bg-[#f8f9fa]" type="submit">Add</button>
               </form>
             </section>
@@ -306,11 +333,11 @@ export default function Home() {
                       <p className="text-sm font-medium leading-5 text-[#35404b]">{activity.description}</p>
                       <p className="mt-1 text-xs text-[#9aa3ac]">{activity.time}{activity.duration ? ` · ${activity.duration}` : ""}</p>
                     </div>
-                    {isLoading ? <p className="text-sm text-[#9aa3ac]">Loading your activity...</p> : null}
-                    {!isLoading && activities.length === 0 ? <p className="text-sm text-[#9aa3ac]">No activity logged yet today.</p> : null}
                   </div>
                 ))}
               </div>
+              {isLoading ? <p className="text-sm text-[#9aa3ac]">Loading your activity...</p> : null}
+              {!isLoading && activities.length === 0 ? <p className="text-sm text-[#9aa3ac]">No activity logged yet today.</p> : null}
               <button className="mt-8 w-full rounded-xl border border-[#e0e4e8] py-3 text-sm font-semibold text-[#53606c] hover:bg-[#f8f9fa]">View full history</button>
             </section>
           </div>
