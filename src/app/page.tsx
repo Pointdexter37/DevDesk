@@ -48,6 +48,8 @@ export default function Home() {
   const [newTaskEstimate, setNewTaskEstimate] = useState("30");
   const [newActivity, setNewActivity] = useState("");
   const [newActivityDuration, setNewActivityDuration] = useState("");
+  const [reflection, setReflection] = useState("");
+  const [isSavingReview, setIsSavingReview] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTaskTitle, setEditingTaskTitle] = useState("");
   const [editingTaskPriority, setEditingTaskPriority] =
@@ -97,6 +99,10 @@ export default function Home() {
             durationMinutes: activity.durationMinutes,
           })),
         );
+        const reviewResponse = await fetch(`/api/reviews?date=${today}`);
+        if (!reviewResponse.ok) throw new Error("Unable to load daily review.");
+        const review = await reviewResponse.json();
+        setReflection(review.reflection ?? "");
       } catch (loadError) {
         console.error(loadError);
         setError("We couldn't load your dashboard.");
@@ -106,7 +112,7 @@ export default function Home() {
     }
 
     void loadDashboard();
-  }, []);
+  }, [today]);
 
   const orderedTasks = prioritizeTasks(
     tasks.filter(
@@ -308,6 +314,26 @@ export default function Home() {
       console.error(taskError);
       setError("We couldn't delete that task.");
     }
+
+  }
+
+  async function saveReview(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSavingReview(true);
+
+    try {
+      const response = await fetch("/api/reviews", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: today, reflection }),
+      });
+      if (!response.ok) throw new Error("Unable to save daily review.");
+    } catch (reviewError) {
+      console.error(reviewError);
+      setError("We couldn't save your daily review.");
+    } finally {
+      setIsSavingReview(false);
+    }
   }
 
   return (
@@ -497,6 +523,33 @@ export default function Home() {
               <a className="mt-8 block w-full rounded-xl border border-[#e0e4e8] py-3 text-center text-sm font-semibold text-[#53606c] hover:bg-[#f8f9fa]" href="/activity">View full history</a>
             </section>
           </div>
+          <section className="mt-5 rounded-3xl border border-[#e7eaee] bg-white p-7 shadow-[0_8px_30px_rgba(23,32,42,0.03)] sm:p-8">
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="mb-2 text-sm font-medium text-[#7b8490]">End-of-day review</p>
+                <h2 className="text-2xl font-semibold tracking-[-0.03em]">Make the day visible</h2>
+                <p className="mt-2 text-sm text-[#68727d]">
+                  {completedCount} completed, {orderedTasks.length} still open, {loggedMinutes} minutes logged.
+                </p>
+              </div>
+              <span className="rounded-full bg-[#f0f2ff] px-3 py-1 text-xs font-semibold text-[#5364d5]">Private note</span>
+            </div>
+            <form onSubmit={saveReview}>
+              <textarea
+                className="min-h-28 w-full resize-y rounded-2xl border border-[#e0e4e8] bg-[#fafbfc] px-4 py-3 text-sm leading-6 outline-none placeholder:text-[#a0a8b0] focus:border-[#7685ec]"
+                placeholder="What went well? What should carry into tomorrow?"
+                value={reflection}
+                onChange={(event) => setReflection(event.target.value)}
+                maxLength={2000}
+              />
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-xs text-[#9aa3ac]">{reflection.length}/2000</span>
+                <button className="rounded-xl bg-[#4255d4] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#3446bf] disabled:cursor-not-allowed disabled:opacity-60" type="submit" disabled={isSavingReview}>
+                  {isSavingReview ? "Saving..." : "Save review"}
+                </button>
+              </div>
+            </form>
+          </section>
         </section>
       </div>
     </main>

@@ -31,3 +31,10 @@ export const activities = sqliteTable("activities", {
   occurredAt: integer("occurred_at", { mode: "timestamp" }).notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
+
+export const dailyReviews = sqliteTable("daily_reviews", {
+  date: text("date").primaryKey(),
+  reflection: text("reflection").notNull().default(""),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
