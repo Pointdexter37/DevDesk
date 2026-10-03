@@ -1,8 +1,12 @@
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
 
-const url = process.env.TURSO_DATABASE_URL ?? "file:local.db";
-const authToken = process.env.TURSO_AUTH_TOKEN;
+const databaseUrl = process.env.DATABASE_URL;
 
-export const client = createClient({ url, authToken });
-export const db = drizzle(client);
+export function getDb() {
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is required to connect to Neon.");
+  }
+
+  return drizzle(neon(databaseUrl));
+}

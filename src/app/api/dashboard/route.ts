@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { desc } from "drizzle-orm";
-import { db } from "@/db/client";
+import { getDb } from "@/db/client";
 import { activities, tasks } from "@/db/schema";
 
 export async function GET() {
   try {
+    const db = getDb();
     const [taskRows, activityRows] = await Promise.all([
       db.select().from(tasks).orderBy(desc(tasks.createdAt)),
       db.select().from(activities).orderBy(desc(activities.occurredAt)),

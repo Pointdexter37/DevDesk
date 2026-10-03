@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/db/client";
+import { getDb } from "@/db/client";
 import { tasks } from "@/db/schema";
 
 const createTaskSchema = z.object({
@@ -36,6 +36,7 @@ export async function POST(request: Request) {
   };
 
   try {
+    const db = getDb();
     await db.insert(tasks).values(task);
     return NextResponse.json(task, { status: 201 });
   } catch (error) {
@@ -65,6 +66,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
+    const db = getDb();
     const completedAt =
       parsed.data.status === "done"
         ? new Date()
@@ -118,6 +120,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    const db = getDb();
     const deleted = await db
       .delete(tasks)
       .where(eq(tasks.id, parsed.data.id))

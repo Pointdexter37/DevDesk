@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/db/client";
+import { getDb } from "@/db/client";
 import { dailyReviews } from "@/db/schema";
 
 const reviewSchema = z.object({
@@ -20,6 +20,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    const db = getDb();
     const [review] = await db
       .select()
       .from(dailyReviews)
@@ -48,6 +49,7 @@ export async function PUT(request: Request) {
   const now = new Date();
 
   try {
+    const db = getDb();
     const [review] = await db
       .insert(dailyReviews)
       .values({

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@/db/client";
+import { getDb } from "@/db/client";
 import { activities, tasks } from "@/db/schema";
 
 const createActivitySchema = z.object({
@@ -19,6 +19,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    const db = getDb();
     const conditions = date
       ? and(
           gte(activities.occurredAt, new Date(`${date}T00:00:00`)),
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
   };
 
   try {
+    const db = getDb();
     await db.insert(activities).values(activity);
     return NextResponse.json(activity, { status: 201 });
   } catch (error) {
@@ -100,6 +102,7 @@ export async function PATCH(request: Request) {
   }
 
   try {
+    const db = getDb();
     const [activity] = await db
       .update(activities)
       .set({
@@ -139,6 +142,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    const db = getDb();
     const deleted = await db
       .delete(activities)
       .where(eq(activities.id, parsed.data.id))

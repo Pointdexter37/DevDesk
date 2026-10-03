@@ -12,8 +12,7 @@ The MVP is a single-user Next.js application with manually managed tasks, activi
 - Next.js App Router and TypeScript
 - Tailwind CSS
 - Drizzle ORM
-- SQLite locally
-- Turso/libSQL in production
+- Neon PostgreSQL
 - Vitest for unit tests
 - Playwright for browser tests
 - Vercel deployment
@@ -29,16 +28,15 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-The default local database is `local.db`. It is ignored by Git.
+The application connects to Neon through `DATABASE_URL`.
 
 ## Environment variables
 
 ```env
-TURSO_DATABASE_URL=file:local.db
-TURSO_AUTH_TOKEN=
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
 ```
 
-For production, set `TURSO_DATABASE_URL` to the Turso libSQL URL and provide the database token.
+Use the connection string supplied by Neon. Keep it in `.env.local` and never commit it.
 
 ## Useful commands
 
@@ -51,6 +49,10 @@ npm run db:generate  # Generate a Drizzle migration
 npm run db:migrate   # Apply migrations
 ```
 
+PostgreSQL migrations are generated in `src/db/migrations-postgres`. The
+earlier SQLite migration directory is retained only as legacy history and is
+not used by the current Drizzle configuration.
+
 ## Main routes
 
 - `/` — Today dashboard
@@ -60,12 +62,12 @@ npm run db:migrate   # Apply migrations
 - `/api/activities` — Activity CRUD and date filtering
 - `/api/reviews` — Daily review load/save
 
-## Turso and Vercel deployment
+## Neon and Vercel deployment
 
-1. Create a Turso database and obtain its URL and auth token.
-2. Set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in the local environment.
-3. Run `npm run db:migrate` against the production database.
-4. Add both variables to the Vercel project environment settings.
+1. Create a Neon project and copy its pooled PostgreSQL connection string.
+2. Set `DATABASE_URL` in `.env.local`.
+3. Run `npm run db:migrate` against the Neon database.
+4. Add `DATABASE_URL` to the Vercel project environment settings.
 5. Deploy the repository to Vercel.
 6. Verify task creation, activity logging, and daily review persistence in the deployed app.
 
