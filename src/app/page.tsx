@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import {
+  getTaskRecommendation,
   prioritizeTasks,
   type PrioritizableTask,
 } from "@/lib/task-prioritization";
@@ -125,6 +126,10 @@ export default function Home() {
   );
   const progress =
     tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
+  const focusTask = orderedTasks[0];
+  const focusMessage = focusTask
+    ? getTaskRecommendation(focusTask, today)
+    : "Add a task to create a clear focus for your day.";
 
   async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -358,7 +363,7 @@ export default function Home() {
                 <div>
                   <p className="mb-4 text-sm font-medium text-[#aeb8c1]">Focus for today</p>
                   <h2 className="max-w-md text-2xl font-semibold leading-tight tracking-[-0.03em] sm:text-3xl">
-                    Start with the roadmap review, then protect time for the update.
+                    {focusMessage}
                   </h2>
                 </div>
                 <span className="rounded-full bg-[#2d3945] px-3 py-1 text-xs font-semibold text-[#cbd2d8]">

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getTaskScore,
+  getTaskRecommendation,
   prioritizeTasks,
   type PrioritizableTask,
 } from "./task-prioritization";
@@ -43,6 +44,33 @@ describe("prioritizeTasks", () => {
 
     expect(result[0].priority).toBe("high");
     expect(tasks[0].priority).toBe("low");
+  });
+
+  describe("getTaskRecommendation", () => {
+    it("explains why an overdue task is recommended", () => {
+      expect(
+        getTaskRecommendation(
+          {
+            ...task({ dueDate: "2026-10-02" }),
+            title: "Send the update",
+            estimatedMinutes: 20,
+          },
+          today,
+        ),
+      ).toContain("overdue");
+    });
+
+    it("uses high priority when there is no due date", () => {
+      expect(
+        getTaskRecommendation(
+          {
+            ...task({ priority: "high" }),
+            title: "Plan the sprint",
+          },
+          today,
+        ),
+      ).toContain("high priority");
+    });
   });
 
   it("orders by urgency, date, and priority", () => {
