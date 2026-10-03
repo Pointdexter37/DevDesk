@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   prioritizeTasks,
   type PrioritizableTask,
@@ -27,6 +27,14 @@ function formatDate(date: Date) {
   }).format(date);
 }
 
+function getDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -34,7 +42,8 @@ export default function Home() {
   const [newActivity, setNewActivity] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const today = "2026-10-03";
+  const todayDate = new Date();
+  const today = getDateKey(todayDate);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -84,12 +93,13 @@ export default function Home() {
     void loadDashboard();
   }, []);
 
-  const orderedTasks = useMemo(
-    () => prioritizeTasks(tasks.filter((task) => task.status !== "done"), today),
-    [tasks],
+  const orderedTasks = prioritizeTasks(
+    tasks.filter((task) => task.status !== "done"),
+    today,
   );
   const completedCount = tasks.filter((task) => task.status === "done").length;
-  const progress = Math.round((completedCount / tasks.length) * 100);
+  const progress =
+    tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
 
   async function addTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -208,7 +218,7 @@ export default function Home() {
         <section className="flex-1 px-5 py-6 sm:px-10 lg:px-14 lg:py-10">
           <header className="mb-10 flex items-start justify-between">
             <div>
-              <p className="mb-2 text-sm font-medium text-[#7b8490]">{formatDate(new Date(2026, 9, 3))}</p>
+              <p className="mb-2 text-sm font-medium text-[#7b8490]">{formatDate(todayDate)}</p>
               <h1 className="text-3xl font-bold tracking-[-0.04em] sm:text-4xl">Good morning, Alex.</h1>
               <p className="mt-3 text-[#68727d]">Let&apos;s make today count.</p>
             </div>
