@@ -52,6 +52,7 @@ export async function PATCH(request: Request) {
     .object({
       id: z.string().uuid(),
       title: z.string().trim().min(1).max(200).optional(),
+      description: z.string().trim().max(1000).nullable().optional(),
       dueDate: z.string().date().nullable().optional(),
       priority: z.enum(["low", "medium", "high"]).optional(),
       estimatedMinutes: z.number().int().positive().max(1440).optional(),
@@ -74,6 +75,9 @@ export async function PATCH(request: Request) {
       .update(tasks)
       .set({
         ...(parsed.data.title !== undefined && { title: parsed.data.title }),
+        ...(parsed.data.description !== undefined && {
+          description: parsed.data.description,
+        }),
         ...(parsed.data.dueDate !== undefined && {
           dueDate: parsed.data.dueDate,
         }),

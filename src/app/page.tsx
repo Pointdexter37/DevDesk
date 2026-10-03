@@ -10,6 +10,7 @@ import {
 type Task = PrioritizableTask & {
   id: string;
   title: string;
+  description: string | null;
   estimate: string;
   estimatedMinutes: number | null;
   completedAt?: string | null;
@@ -52,9 +53,13 @@ export default function Home() {
   const [isSavingReview, setIsSavingReview] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTaskTitle, setEditingTaskTitle] = useState("");
+  const [editingTaskDescription, setEditingTaskDescription] = useState("");
+  const [editingTaskDueDate, setEditingTaskDueDate] = useState("");
   const [editingTaskPriority, setEditingTaskPriority] =
     useState<Task["priority"]>("medium");
   const [editingTaskEstimate, setEditingTaskEstimate] = useState("30");
+  const [editingTaskStatus, setEditingTaskStatus] =
+    useState<Task["status"]>("todo");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const todayDate = new Date();
@@ -70,6 +75,7 @@ export default function Home() {
           data.tasks.map((task: {
             id: string;
             title: string;
+            description: string | null;
             estimatedMinutes: number | null;
             completedAt: string | null;
             priority: Task["priority"];
@@ -236,8 +242,11 @@ export default function Home() {
   function startEditingTask(task: Task) {
     setEditingTaskId(task.id);
     setEditingTaskTitle(task.title);
+    setEditingTaskDescription(task.description ?? "");
+    setEditingTaskDueDate(task.dueDate ?? "");
     setEditingTaskPriority(task.priority);
     setEditingTaskEstimate(String(task.estimatedMinutes ?? 30));
+    setEditingTaskStatus(task.status);
   }
 
   async function saveTask(event: FormEvent<HTMLFormElement>, task: Task) {
@@ -252,8 +261,11 @@ export default function Home() {
         body: JSON.stringify({
           id: task.id,
           title,
+          description: editingTaskDescription.trim() || null,
+          dueDate: editingTaskDueDate || null,
           priority: editingTaskPriority,
           estimatedMinutes: Number(editingTaskEstimate),
+          status: editingTaskStatus,
         }),
       });
       if (!response.ok) throw new Error("Unable to edit task.");
@@ -436,10 +448,15 @@ export default function Home() {
                   editingTaskId === task.id ? (
                     <form key={task.id} className="rounded-2xl bg-[#f8f9fb] p-4" onSubmit={(event) => void saveTask(event, task)}>
                       <input className="w-full rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm outline-none focus:border-[#7685ec]" value={editingTaskTitle} onChange={(event) => setEditingTaskTitle(event.target.value)} aria-label="Task title" />
+                      <textarea className="mt-2 min-h-16 w-full rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm outline-none focus:border-[#7685ec]" placeholder="Description (optional)" value={editingTaskDescription} onChange={(event) => setEditingTaskDescription(event.target.value)} aria-label="Task description" />
                       <div className="mt-2 flex gap-2">
+                        <select className="rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm" value={editingTaskStatus} onChange={(event) => setEditingTaskStatus(event.target.value as Task["status"])} aria-label="Task status">
+                          <option value="todo">Todo</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="archived">Archived</option>
+                        </select>
                         <select className="rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm" value={editingTaskPriority} onChange={(event) => setEditingTaskPriority(event.target.value as Task["priority"])} aria-label="Task priority">
                           <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
                         </select>
+                        <input className="w-32 rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm" type="date" value={editingTaskDueDate} onChange={(event) => setEditingTaskDueDate(event.target.value)} aria-label="Task due date" />
                         <input className="w-20 rounded-xl border border-[#e0e4e8] bg-white px-3 py-2 text-sm" type="number" min="1" max="1440" value={editingTaskEstimate} onChange={(event) => setEditingTaskEstimate(event.target.value)} aria-label="Estimated minutes" />
                         <button className="rounded-xl bg-[#4255d4] px-3 py-2 text-xs font-semibold text-white" type="submit">Save</button>
                         <button className="rounded-xl border border-[#dfe3e8] px-3 py-2 text-xs font-semibold text-[#53606c]" type="button" onClick={() => setEditingTaskId(null)}>Cancel</button>
@@ -450,7 +467,11 @@ export default function Home() {
                       <button className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${index === 0 ? "border-[#4255d4] bg-[#4255d4] text-white" : "border-[#d8dde2] text-transparent group-hover:border-[#9aa7f0]"}`} onClick={() => void toggleTask(task)} aria-label={`Complete ${task.title}`}>✓</button>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold text-[#27323d]">{task.title}</span>
-                        <span className="mt-1 block text-xs text-[#8b949d]">{task.estimate} <span className="mx-1">·</span> {task.priority} priority</span>
+                        <span className="mt-1 block text-xs text-[#8b949d]">
+                          {task.estimate} <span className="mx-1">·</span> {task.priority} priority
+                          {task.dueDate && task.dueDate < today ? <span className="ml-2 font-semibold text-[#9f2d3d]">Overdue</span> : null}
+                          {task.status === "in_progress" ? <span className="ml-2 font-semibold text-[#5364d5]">In progress</span> : null}
+                        </span>
                       </span>
                       <span className="text-xs font-medium text-[#8b949d]">{index === 0 ? "Now" : "Later"}</span>
                       <button className="text-xs font-semibold text-[#5364d5] opacity-0 group-hover:opacity-100" onClick={() => startEditingTask(task)}>Edit</button>
