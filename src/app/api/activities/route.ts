@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const range = date
       ? getUtcDayRange(date, timezoneOffsetMinutes)
       : undefined;
-    const conditions = date
+    const conditions = range
       ? and(
           gte(activities.occurredAt, range.start),
           lt(activities.occurredAt, range.end),

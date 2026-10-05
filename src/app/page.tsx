@@ -385,7 +385,7 @@ export default function Home() {
   }
 
   return (
-    <main className="havu-shell min-h-screen bg-[#f7f8fa] text-[#17202a]">
+    <main className="havu-shell min-h-screen bg-[#f7f8fa] text-[#17202a]" aria-busy={isLoading}>
       {error ? (
         <div className="fixed right-5 top-5 z-10 rounded-xl bg-[#9f2d3d] px-4 py-3 text-sm font-medium text-white shadow-lg">
           {error}
@@ -435,6 +435,12 @@ export default function Home() {
               <span className="mr-2">⚙</span> Settings
             </button>
           </header>
+
+          {isLoading ? (
+            <div className="mb-8 rounded-2xl border border-[#e7eaee] bg-white px-4 py-3 text-sm text-[#7b8490]" role="status">
+              Loading your day...
+            </div>
+          ) : null}
 
           {isSettingsOpen ? (
             <form className="mb-8 rounded-3xl border border-[#e7eaee] bg-white p-6 sm:p-8" onSubmit={saveSettings}>

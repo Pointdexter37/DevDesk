@@ -71,4 +71,13 @@ not used by the current Drizzle configuration.
 5. Deploy the repository to Vercel.
 6. Verify task creation, activity logging, and daily review persistence in the deployed app.
 
-Authentication is intentionally not included in this MVP. Do not expose a production deployment publicly until an authentication layer is added.
+Authentication is an opt-in single-user password gate. Set both `AUTH_PASSWORD` and
+`AUTH_SECRET` in `.env.local` and Vercel before exposing the deployment publicly.
+Use a long random secret and never commit either value.
+
+Before production deployment:
+
+1. Run `npm run db:migrate` against the intended Neon database.
+2. Set `DATABASE_URL`, `AUTH_PASSWORD`, and `AUTH_SECRET` in Vercel.
+3. Run `npm run lint`, `npm test`, `npm run test:e2e`, and `npm run build`.
+4. Verify login, task/activity CRUD, daily review persistence, and timezone-aware Today data.
