@@ -3,6 +3,7 @@ import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { activities, tasks } from "@/db/schema";
+import { getUtcDayRange } from "@/lib/date-utils";
 
 const createActivitySchema = z.object({
   description: z.string().trim().min(1).max(500),
@@ -13,17 +14,28 @@ const createActivitySchema = z.object({
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
+  const timezoneOffsetMinutes = Number(
+    searchParams.get("timezoneOffsetMinutes") ?? 0,
+  );
 
-  if (date && !z.string().date().safeParse(date).success) {
+  if (
+    (date && !z.string().date().safeParse(date).success) ||
+    !Number.isInteger(timezoneOffsetMinutes) ||
+    timezoneOffsetMinutes < -840 ||
+    timezoneOffsetMinutes > 840
+  ) {
     return NextResponse.json({ error: "Invalid date." }, { status: 400 });
   }
 
   try {
     const db = getDb();
+    const range = date
+      ? getUtcDayRange(date, timezoneOffsetMinutes)
+      : undefined;
     const conditions = date
       ? and(
-          gte(activities.occurredAt, new Date(`${date}T00:00:00`)),
-          lt(activities.occurredAt, new Date(`${date}T23:59:59.999`)),
+          gte(activities.occurredAt, range.start),
+          lt(activities.occurredAt, range.end),
         )
       : undefined;
     const rows = await db
@@ -39,7 +51,8 @@ export async function GET(request: Request) {
       .from(activities)
       .leftJoin(tasks, eq(activities.taskId, tasks.id))
       .where(conditions)
-      .orderBy(desc(activities.occurredAt));
+      .orderBy(desc(activities.occurredAt))
+      .limit(500);
 
     return NextResponse.json(rows);
   } catch (error) {

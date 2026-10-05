@@ -6,6 +6,7 @@ import {
   prioritizeTasks,
   type PrioritizableTask,
 } from "@/lib/task-prioritization";
+import { getDateKey, isDateKey } from "@/lib/date-utils";
 
 type Task = PrioritizableTask & {
   id: string;
@@ -33,14 +34,6 @@ function formatDate(date: Date) {
   }).format(date);
 }
 
-function getDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -66,6 +59,9 @@ export default function Home() {
     "open" | "in_progress" | "overdue"
   >("open");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [displayName, setDisplayName] = useState("there");
+  const [settingsName, setSettingsName] = useState("");
   const [error, setError] = useState("");
   const todayDate = new Date();
   const today = getDateKey(todayDate);
@@ -73,7 +69,9 @@ export default function Home() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const response = await fetch("/api/dashboard");
+        const response = await fetch(
+          `/api/dashboard?date=${today}&timezoneOffsetMinutes=${new Date().getTimezoneOffset()}`,
+        );
         if (!response.ok) throw new Error("Unable to load dashboard data.");
         const data = await response.json();
         setTasks(
@@ -127,6 +125,16 @@ export default function Home() {
     void loadDashboard();
   }, [today]);
 
+  useEffect(() => {
+    queueMicrotask(() => {
+      const savedName = window.localStorage.getItem("devdesk.displayName");
+      if (savedName) {
+        setDisplayName(savedName);
+        setSettingsName(savedName === "there" ? "" : savedName);
+      }
+    });
+  }, []);
+
   const orderedTasks = prioritizeTasks(
     tasks.filter(
       (task) => task.status !== "done" && task.status !== "archived",
@@ -139,7 +147,12 @@ export default function Home() {
     return true;
   });
   const completedCount = tasks.filter((task) => task.status === "done").length;
-  const completedTasks = tasks.filter((task) => task.status === "done");
+  const completedTasks = tasks.filter(
+    (task) =>
+      task.status === "done" &&
+      task.completedAt &&
+      isDateKey(task.completedAt, today),
+  );
   const plannedMinutes = orderedTasks.reduce(
     (total, task) => total + (task.estimatedMinutes ?? 0),
     0,
@@ -363,6 +376,14 @@ export default function Home() {
     }
   }
 
+  function saveSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextName = settingsName.trim() || "there";
+    window.localStorage.setItem("devdesk.displayName", nextName);
+    setDisplayName(nextName);
+    setIsSettingsOpen(false);
+  }
+
   return (
     <main className="havu-shell min-h-screen bg-[#f7f8fa] text-[#17202a]">
       {error ? (
@@ -407,13 +428,30 @@ export default function Home() {
           <header className="mb-10 flex items-start justify-between">
             <div>
               <p className="mb-2 text-sm font-medium text-[#7b8490]">{formatDate(todayDate)}</p>
-              <h1 className="text-3xl font-bold tracking-[-0.04em] sm:text-4xl">Good morning, Alex.</h1>
+              <h1 className="text-3xl font-bold tracking-[-0.04em] sm:text-4xl">Good morning, {displayName}.</h1>
               <p className="mt-3 text-[#68727d]">Let&apos;s make today count.</p>
             </div>
-            <button className="rounded-full border border-[#e0e4e8] bg-white px-4 py-2 text-sm font-medium text-[#53606c] shadow-sm hover:bg-[#f8f9fa]" aria-label="Open settings">
+            <button className="rounded-full border border-[#e0e4e8] bg-white px-4 py-2 text-sm font-medium text-[#53606c] shadow-sm hover:bg-[#f8f9fa]" aria-label="Open settings" onClick={() => setIsSettingsOpen((open) => !open)}>
               <span className="mr-2">⚙</span> Settings
             </button>
           </header>
+
+          {isSettingsOpen ? (
+            <form className="mb-8 rounded-3xl border border-[#e7eaee] bg-white p-6 sm:p-8" onSubmit={saveSettings}>
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-[#7b8490]">Preferences</p>
+                  <h2 className="text-xl font-semibold tracking-[-0.03em]">Make DevDesk feel like yours</h2>
+                </div>
+                <button className="rounded-xl bg-[#4255d4] px-4 py-2.5 text-sm font-semibold text-white" type="submit">Save settings</button>
+              </div>
+              <label className="mt-6 block max-w-sm text-sm font-medium text-[#53606c]">
+                Name for your greeting
+                <input className="mt-2 w-full rounded-xl border border-[#e0e4e8] px-4 py-3 outline-none focus:border-[#7685ec]" value={settingsName} onChange={(event) => setSettingsName(event.target.value)} placeholder="Your name" maxLength={60} />
+              </label>
+              <p className="mt-3 text-xs text-[#9aa3ac]">Your local timezone is used automatically for Today and activity history.</p>
+            </form>
+          ) : null}
 
           <div className="mb-8 grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
             <section id="today" className="rounded-3xl bg-[#17202a] p-7 text-white shadow-[0_18px_50px_rgba(23,32,42,0.12)] sm:p-8">
@@ -572,7 +610,7 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              {isLoading ? <p className="text-sm text-[#9aa3ac]">Loading your activity...</p> : null}
+              {isLoading ? <p className="text-sm text-[#9aa3ac]">Loading your day...</p> : null}
               {!isLoading && activities.length === 0 ? <p className="text-sm text-[#9aa3ac]">No activity logged yet today.</p> : null}
               <a className="mt-8 block w-full rounded-xl border border-[#e0e4e8] py-3 text-center text-sm font-semibold text-[#53606c] hover:bg-[#f8f9fa]" href="/activity">View full history</a>
             </section>

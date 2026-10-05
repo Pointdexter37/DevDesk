@@ -2,6 +2,7 @@
 
 import { FormEvent, type CSSProperties, useEffect, useState } from "react";
 import Link from "next/link";
+import { getDateKey } from "@/lib/date-utils";
 
 type Activity = {
   id: string;
@@ -13,8 +14,7 @@ type Activity = {
 };
 
 function todayKey() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return getDateKey(new Date());
 }
 
 export default function ActivityHistoryPage() {
@@ -27,7 +27,9 @@ export default function ActivityHistoryPage() {
 
   async function loadActivities(selectedDate: string) {
     try {
-      const response = await fetch(`/api/activities?date=${selectedDate}`);
+      const response = await fetch(
+        `/api/activities?date=${selectedDate}&timezoneOffsetMinutes=${new Date().getTimezoneOffset()}`,
+      );
       if (!response.ok) throw new Error("Unable to load activity history.");
       setActivities(await response.json());
     } catch (loadError) {

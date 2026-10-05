@@ -1,5 +1,6 @@
 import {
   integer,
+  index,
   pgTable,
   text,
   timestamp,
@@ -20,7 +21,11 @@ export const tasks = pgTable("tasks", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-});
+}, (table) => [
+  index("tasks_status_idx").on(table.status),
+  index("tasks_due_date_idx").on(table.dueDate),
+  index("tasks_completed_at_idx").on(table.completedAt),
+]);
 
 export const activities = pgTable("activities", {
   id: text("id").primaryKey(),
@@ -31,7 +36,10 @@ export const activities = pgTable("activities", {
   durationMinutes: integer("duration_minutes"),
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-});
+}, (table) => [
+  index("activities_occurred_at_idx").on(table.occurredAt),
+  index("activities_task_id_idx").on(table.taskId),
+]);
 
 export const dailyReviews = pgTable("daily_reviews", {
   date: text("date").primaryKey(),
